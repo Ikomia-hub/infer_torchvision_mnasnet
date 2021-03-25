@@ -185,7 +185,7 @@ class MnasNetProcessFactory(dataprocess.CProcessFactory):
         # relative path -> as displayed in Ikomia application process tree
         self.info.path = "Plugins/Python/Classification"
         self.info.iconPath = "icons/pytorch-logo.png"
-        self.info.version = "1.0.0"
+        self.info.version = "1.0.1"
         self.info.keywords = "mnasnet,mobile,classification,cnn"
 
     def create(self, param=None):
