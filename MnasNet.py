@@ -1,6 +1,4 @@
 from ikomia import dataprocess
-import MnasNet_process as processMod
-import MnasNet_widget as widgetMod
 
 
 # --------------------
@@ -13,9 +11,11 @@ class MnasNet(dataprocess.CPluginProcessInterface):
         dataprocess.CPluginProcessInterface.__init__(self)
 
     def getProcessFactory(self):
+        from MnasNet.MnasNet_process import MnasNetProcessFactory
         # Instantiate process object
-        return processMod.MnasNetProcessFactory()
+        return MnasNetProcessFactory()
 
     def getWidgetFactory(self):
+        from MnasNet.MnasNet_widget import MnasNetWidgetFactory
         # Instantiate associated widget object
-        return widgetMod.MnasNetWidgetFactory()
+        return MnasNetWidgetFactory()

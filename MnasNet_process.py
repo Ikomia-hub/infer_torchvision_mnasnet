@@ -2,7 +2,6 @@ from ikomia import core, dataprocess
 from ikomia.dnn.torch import models
 import os
 import copy
-# Your imports below
 import cv2
 import torch
 import torchvision.transforms as transforms
@@ -12,10 +11,10 @@ import torchvision.transforms as transforms
 # - Class to handle the process parameters
 # - Inherits core.CProtocolTaskParam from Ikomia API
 # --------------------
-class MnasNetParam(core.CProtocolTaskParam):
+class MnasNetParam(core.CWorkflowTaskParam):
 
     def __init__(self):
-        core.CProtocolTaskParam.__init__(self)
+        core.CWorkflowTaskParam.__init__(self)
         # Place default value initialization here
         self.model_name = 'mnasnet'
         self.dataset = 'ImageNet'
@@ -47,10 +46,10 @@ class MnasNetParam(core.CProtocolTaskParam):
 # - Class which implements the process
 # - Inherits core.CProtocolTask or derived from Ikomia API
 # --------------------
-class MnasNetProcess(dataprocess.CImageProcess2d):
+class MnasNetProcess(dataprocess.C2dImageTask):
 
     def __init__(self, name, param):
-        dataprocess.CImageProcess2d.__init__(self, name)
+        dataprocess.C2dImageTask.__init__(self, name)
         self.model = None
         self.class_names = []
         # Detect if we have a GPU available
@@ -60,7 +59,7 @@ class MnasNetProcess(dataprocess.CImageProcess2d):
         # Add graphics output
         self.addOutput(dataprocess.CGraphicsOutput())
         # Add numeric output
-        self.addOutput(dataprocess.CDblFeatureIO())
+        self.addOutput(dataprocess.CNumericIO())
 
         # Create parameters class
         if param is None:
@@ -163,10 +162,10 @@ class MnasNetProcess(dataprocess.CImageProcess2d):
 # - Factory class to build process object
 # - Inherits dataprocess.CProcessFactory from Ikomia API
 # --------------------
-class MnasNetProcessFactory(dataprocess.CProcessFactory):
+class MnasNetProcessFactory(dataprocess.CTaskFactory):
 
     def __init__(self):
-        dataprocess.CProcessFactory.__init__(self)
+        dataprocess.CTaskFactory.__init__(self)
         # Set process information as string here
         self.info.name = "MnasNet"
         self.info.shortDescription = "MnasNet inference model for image classification."

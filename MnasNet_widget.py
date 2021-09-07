@@ -1,8 +1,8 @@
-from ikomia import utils, core, dataprocess
 import os
-import MnasNet_process as processMod
-
-#PyQt GUI framework
+from ikomia import utils, core, dataprocess
+from ikomia.utils import pyqtutils, qtconversion
+from MnasNet.MnasNet_process import MnasNetParam
+# PyQt GUI framework
 from PyQt5.QtWidgets import *
 
 
@@ -10,30 +10,30 @@ from PyQt5.QtWidgets import *
 # - Class which implements widget associated with the process
 # - Inherits core.CProtocolTaskWidget from Ikomia API
 # --------------------
-class MnasNetWidget(core.CProtocolTaskWidget):
+class MnasNetWidget(core.CWorkflowTaskWidget):
 
     def __init__(self, param, parent):
-        core.CProtocolTaskWidget.__init__(self, parent)
+        core.CWorkflowTaskWidget.__init__(self, parent)
 
         if param is None:
-            self.parameters = processMod.MnasNetParam()
+            self.parameters = MnasNetParam()
         else:
             self.parameters = param
 
         # Create layout : QGridLayout by default
         self.grid_layout = QGridLayout()
 
-        self.combo_dataset = utils.append_combo(self.grid_layout, "Trained on")
+        self.combo_dataset = pyqtutils.append_combo(self.grid_layout, "Trained on")
         self.combo_dataset.addItem("ImageNet")
         self.combo_dataset.addItem("Custom")
         self.combo_dataset.setCurrentIndex(self._get_dataset_index())
         self.combo_dataset.currentIndexChanged.connect(self.on_combo_dataset_changed)
 
-        self.spin_size = utils.append_spin(self.grid_layout, label="Input size", value=self.parameters.input_size)
+        self.spin_size = pyqtutils.append_spin(self.grid_layout, label="Input size", value=self.parameters.input_size)
 
-        self.browse_model = utils.append_browse_file(self.grid_layout, "Model path", self.parameters.model_path)
+        self.browse_model = pyqtutils.append_browse_file(self.grid_layout, "Model path", self.parameters.model_path)
 
-        self.browse_classes = utils.append_browse_file(self.grid_layout, "Classes path", self.parameters.classes_path)
+        self.browse_classes = pyqtutils.append_browse_file(self.grid_layout, "Classes path", self.parameters.classes_path)
 
         if self.parameters.dataset == "ImageNet":
             self.browse_model.set_path("Not used")
@@ -41,7 +41,7 @@ class MnasNetWidget(core.CProtocolTaskWidget):
             self.browse_classes.setEnabled(False)
 
         # PyQt -> Qt wrapping
-        layout_ptr = utils.PyQtToQt(self.grid_layout)
+        layout_ptr = qtconversion.PyQtToQt(self.grid_layout)
 
         # Set widget layout
         self.setLayout(layout_ptr)
