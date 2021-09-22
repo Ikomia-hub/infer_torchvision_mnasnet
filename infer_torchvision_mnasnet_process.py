@@ -11,7 +11,7 @@ import torchvision.transforms as transforms
 # - Class to handle the process parameters
 # - Inherits core.CProtocolTaskParam from Ikomia API
 # --------------------
-class MnasNetParam(core.CWorkflowTaskParam):
+class MnasnetParam(core.CWorkflowTaskParam):
 
     def __init__(self):
         core.CWorkflowTaskParam.__init__(self)
@@ -46,7 +46,7 @@ class MnasNetParam(core.CWorkflowTaskParam):
 # - Class which implements the process
 # - Inherits core.CProtocolTask or derived from Ikomia API
 # --------------------
-class MnasNetProcess(dataprocess.C2dImageTask):
+class Mnasnet(dataprocess.C2dImageTask):
 
     def __init__(self, name, param):
         dataprocess.C2dImageTask.__init__(self, name)
@@ -63,7 +63,7 @@ class MnasNetProcess(dataprocess.C2dImageTask):
 
         # Create parameters class
         if param is None:
-            self.setParam(MnasNetParam())
+            self.setParam(MnasnetParam())
         else:
             self.setParam(copy.deepcopy(param))
 
@@ -162,12 +162,12 @@ class MnasNetProcess(dataprocess.C2dImageTask):
 # - Factory class to build process object
 # - Inherits dataprocess.CProcessFactory from Ikomia API
 # --------------------
-class MnasNetProcessFactory(dataprocess.CTaskFactory):
+class MnasnetFactory(dataprocess.CTaskFactory):
 
     def __init__(self):
         dataprocess.CTaskFactory.__init__(self)
         # Set process information as string here
-        self.info.name = "MnasNet"
+        self.info.name = "infer_torchvision_mnasnet"
         self.info.shortDescription = "MnasNet inference model for image classification."
         self.info.description = "MnasNet inference model for image classification. " \
                                 "Implementation from PyTorch torchvision package. " \
@@ -189,4 +189,4 @@ class MnasNetProcessFactory(dataprocess.CTaskFactory):
 
     def create(self, param=None):
         # Create process object
-        return MnasNetProcess(self.info.name, param)
+        return Mnasnet(self.info.name, param)

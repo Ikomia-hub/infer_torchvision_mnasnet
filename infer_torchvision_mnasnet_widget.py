@@ -1,7 +1,7 @@
 import os
 from ikomia import utils, core, dataprocess
 from ikomia.utils import pyqtutils, qtconversion
-from MnasNet.MnasNet_process import MnasNetParam
+from infer_torchvision_mnasnet.infer_torchvision_mnasnet_process import MnasnetParam
 # PyQt GUI framework
 from PyQt5.QtWidgets import *
 
@@ -10,13 +10,13 @@ from PyQt5.QtWidgets import *
 # - Class which implements widget associated with the process
 # - Inherits core.CProtocolTaskWidget from Ikomia API
 # --------------------
-class MnasNetWidget(core.CWorkflowTaskWidget):
+class MnasnetWidget(core.CWorkflowTaskWidget):
 
     def __init__(self, param, parent):
         core.CWorkflowTaskWidget.__init__(self, parent)
 
         if param is None:
-            self.parameters = MnasNetParam()
+            self.parameters = MnasnetParam()
         else:
             self.parameters = param
 
@@ -81,13 +81,13 @@ class MnasNetWidget(core.CWorkflowTaskWidget):
 # - Factory class to build process widget object
 # - Inherits dataprocess.CWidgetFactory from Ikomia API
 # --------------------
-class MnasNetWidgetFactory(dataprocess.CWidgetFactory):
+class MnasnetWidgetFactory(dataprocess.CWidgetFactory):
 
     def __init__(self):
         dataprocess.CWidgetFactory.__init__(self)
         # Set the name of the process -> it must be the same as the one declared in the process factory class
-        self.name = "MnasNet"
+        self.name = "infer_torchvision_mnasnet"
 
     def create(self, param):
         # Create widget object
-        return MnasNetWidget(param, None)
+        return MnasnetWidget(param, None)
