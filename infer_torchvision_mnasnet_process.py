@@ -5,6 +5,7 @@ import copy
 import cv2
 import torch
 import torchvision.transforms as transforms
+import random
 
 
 # --------------------
@@ -51,15 +52,14 @@ class Mnasnet(dataprocess.C2dImageTask):
     def __init__(self, name, param):
         dataprocess.C2dImageTask.__init__(self, name)
         self.model = None
+        self.colors = None
         self.class_names = []
         # Detect if we have a GPU available
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        # Remove graphics input
-        self.removeInput(1)
         # Add graphics output
         self.addOutput(dataprocess.CGraphicsOutput())
         # Add numeric output
-        self.addOutput(dataprocess.CNumericIO())
+        self.addOutput(dataprocess.CDataStringIO())
 
         # Create parameters class
         if param is None:
@@ -78,7 +78,7 @@ class Mnasnet(dataprocess.C2dImageTask):
     def getProgressSteps(self, eltCount=1):
         # Function returning the number of progress steps for this process
         # This is handled by the main progress bar of Ikomia application
-        return 3
+        return 2
 
     def predict(self, image, input_size):
         input_img = cv2.resize(image, (input_size, input_size))
@@ -107,8 +107,9 @@ class Mnasnet(dataprocess.C2dImageTask):
         param = self.getParam()
 
         # Get input :
-        input = self.getInput(0)
-        src_image = input.getImage()
+        image_in = self.getInput(0)
+        src_image = image_in.getImage()
+        graphics_in = self.getInput(1)
 
         h = src_image.shape[0]
         w = src_image.shape[1]
@@ -127,29 +128,77 @@ class Mnasnet(dataprocess.C2dImageTask):
             if param.dataset == "Custom":
                 self.model.load_state_dict(torch.load(param.model_path))
 
+            self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in self.class_names]
             param.update = False
 
-        pred = self.predict(src_image, param.input_size)
+        # Prepare outputs
+        graphics_output = self.getOutput(1)
+        graphics_output.setNewLayer("ResNet")
+        graphics_output.setImageIndex(0)
+        table_output = self.getOutput(2)
+        table_output.setOutputType(dataprocess.NumericOutputType.TABLE)
+        table_output.clearData()
+
+        objects_to_classify = []
+        if graphics_in.isDataAvailable():
+            for item in graphics_in.getItems():
+                if not item.isTextItem():
+                    objects_to_classify.append(item)
+
+        if len(objects_to_classify) > 0:
+            names = []
+            confidences = []
+            boxes = []
+            ids = []
+
+            for obj in objects_to_classify:
+                # Inference
+                rc = obj.getBoundingRect()
+                x = int(rc[0])
+                y = int(rc[1])
+                w = int(rc[2])
+                h = int(rc[3])
+                crop_img = src_image[y:y+h, x:x+w]
+                pred = self.predict(crop_img, param.input_size)
+                class_index = pred.argmax()
+                # Box
+                prop_rect = core.GraphicsRectProperty()
+                prop_rect.pen_color = self.colors[class_index]
+                graphics_box = graphics_output.addRectangle(rc[0], rc[1], rc[2], rc[3], prop_rect)
+                graphics_box.setCategory(self.class_names[class_index])
+                # Label
+                msg = str(graphics_box.getId()) + " - " + self.class_names[class_index]
+                prop_text = core.GraphicsTextProperty()
+                prop_text.font_size = 10
+                prop_text.color = self.colors[class_index]
+                graphics_output.addText(msg, rc[0], rc[1], prop_text)
+                # Result values
+                names.append(self.class_names[class_index])
+                ids.append(str(graphics_box.getId()))
+                confidences.append(str(pred[class_index].item()))
+                boxes.append("{:.2f}, {:.2f}, {:.2f}, {:.2f}".format(rc[0], rc[1], rc[2], rc[3]))
+
+            # Results table output
+            table_output.addValueList(confidences, "Confidence", names)
+            table_output.addValueList(ids, "Graphics object")
+            table_output.addValueList(boxes, "Boxes")
+        else:
+            pred = self.predict(src_image, param.input_size)
+            # Set graphics output
+            class_index = pred.argmax()
+            msg = self.class_names[class_index] + ": {:.3f}".format(pred[class_index])
+            graphics_output.addText(msg, 0.05 * w, 0.05 * h)
+            # Set numeric output
+            sorted_data = sorted(zip(pred.flatten().tolist(), self.class_names), reverse=True)
+            confidences = [str(conf) for conf, _ in sorted_data]
+            names = [name for _, name in sorted_data]
+            table_output.addValueList(confidences, "Probability", names)
 
         # Step progress bar:
         self.emitStepProgress()
 
         # Forward input image
         self.forwardInputImage(0, 0)
-
-        # Set graphics output
-        graphics_output = self.getOutput(1)
-        graphics_output.setNewLayer("MnasNet")
-        graphics_output.setImageIndex(0)
-        class_index = pred.argmax()
-        msg = self.class_names[class_index] + ": {:.3f}".format(pred[class_index])
-        graphics_output.addText(msg, 0.05 * w, 0.05 * h)
-
-        # Init numeric output
-        numeric_ouput = self.getOutput(2)
-        numeric_ouput.clearData()
-        numeric_ouput.setOutputType(dataprocess.NumericOutputType.TABLE)
-        numeric_ouput.addValueList(pred.flatten().tolist(), "Probability", self.class_names)
 
         # Step progress bar:
         self.emitStepProgress()
