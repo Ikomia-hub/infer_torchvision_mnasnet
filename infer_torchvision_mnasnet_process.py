@@ -88,7 +88,7 @@ class Mnasnet(dataprocess.C2dImageTask):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
 
-        input_tensor = trs(input_img)
+        input_tensor = trs(input_img).to(self.device)
         input_tensor = input_tensor.unsqueeze(0)
         prob = None
 
@@ -129,6 +129,7 @@ class Mnasnet(dataprocess.C2dImageTask):
                 self.model.load_state_dict(torch.load(param.model_path))
 
             self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in self.class_names]
+            self.model.to(self.device)
             param.update = False
 
         # Prepare outputs
