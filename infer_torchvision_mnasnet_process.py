@@ -37,7 +37,7 @@ class MnasnetParam(core.CWorkflowTaskParam):
         # Create the specific dict structure (string container)
         param_map = core.ParamMap()
         param_map["dataset"] = self.dataset
-        param_map["input_size"] = str(self.dataset)
+        param_map["input_size"] = str(self.input_size)
         param_map["model_path"] = self.model_path
         param_map["classes_path"] = self.classes_path
         return param_map
@@ -58,7 +58,8 @@ class Mnasnet(dataprocess.C2dImageTask):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # Add graphics output
         self.addOutput(dataprocess.CGraphicsOutput())
-        # Add numeric output
+        # Add numeric outputs
+        self.addOutput(dataprocess.CBlobMeasureIO())
         self.addOutput(dataprocess.CDataStringIO())
 
         # Create parameters class
@@ -79,6 +80,27 @@ class Mnasnet(dataprocess.C2dImageTask):
         # Function returning the number of progress steps for this process
         # This is handled by the main progress bar of Ikomia application
         return 2
+
+    def crop_image(self, src, width, height, box):
+        x = int(box[0])
+        y = int(box[1])
+        w = int(box[2])
+        h = int(box[3])
+
+        if x < 0:
+            x = 0
+        if x + w >= width:
+            w = width - x - 1
+        if y < 0:
+            y = 0
+        if x + h >= height:
+            h = height - y - 1
+
+        if w < 2 or h < 2:
+            return None
+
+        crop_img = src[y:y + h, x:x + w]
+        return crop_img
 
     def predict(self, image, input_size):
         input_img = cv2.resize(image, (input_size, input_size))
@@ -136,9 +158,11 @@ class Mnasnet(dataprocess.C2dImageTask):
         graphics_output = self.getOutput(1)
         graphics_output.setNewLayer("ResNet")
         graphics_output.setImageIndex(0)
-        table_output = self.getOutput(2)
-        table_output.setOutputType(dataprocess.NumericOutputType.TABLE)
-        table_output.clearData()
+        table_output1 = self.getOutput(2)
+        table_output1.clearData()
+        table_output2 = self.getOutput(3)
+        table_output2.setOutputType(dataprocess.NumericOutputType.TABLE)
+        table_output2.clearData()
 
         objects_to_classify = []
         if graphics_in.isDataAvailable():
@@ -147,19 +171,14 @@ class Mnasnet(dataprocess.C2dImageTask):
                     objects_to_classify.append(item)
 
         if len(objects_to_classify) > 0:
-            names = []
-            confidences = []
-            boxes = []
-            ids = []
-
             for obj in objects_to_classify:
                 # Inference
                 rc = obj.getBoundingRect()
-                x = int(rc[0])
-                y = int(rc[1])
-                w = int(rc[2])
-                h = int(rc[3])
-                crop_img = src_image[y:y+h, x:x+w]
+                crop_img = self.crop_image(src_image, w, h, rc)
+
+                if crop_img is None:
+                    continue
+
                 pred = self.predict(crop_img, param.input_size)
                 class_index = pred.argmax()
                 # Box
@@ -173,16 +192,21 @@ class Mnasnet(dataprocess.C2dImageTask):
                 prop_text.font_size = 10
                 prop_text.color = self.colors[class_index]
                 graphics_output.addText(msg, rc[0], rc[1], prop_text)
-                # Result values
-                names.append(self.class_names[class_index])
-                ids.append(str(graphics_box.getId()))
-                confidences.append(str(pred[class_index].item()))
-                boxes.append("{:.2f}, {:.2f}, {:.2f}, {:.2f}".format(rc[0], rc[1], rc[2], rc[3]))
-
-            # Results table output
-            table_output.addValueList(confidences, "Confidence", names)
-            table_output.addValueList(ids, "Graphics object")
-            table_output.addValueList(boxes, "Boxes")
+                # Object results
+                results = []
+                confidence_data = dataprocess.CObjectMeasure(
+                    dataprocess.CMeasure(core.MeasureId.CUSTOM, "Confidence"),
+                    pred[class_index].item(),
+                    graphics_box.getId(),
+                    self.class_names[class_index])
+                box_data = dataprocess.CObjectMeasure(
+                    dataprocess.CMeasure(core.MeasureId.BBOX),
+                    rc,
+                    graphics_box.getId(),
+                    self.class_names[class_index])
+                results.append(confidence_data)
+                results.append(box_data)
+                table_output1.addObjectMeasures(results)
         else:
             pred = self.predict(src_image, param.input_size)
             # Set graphics output
@@ -193,7 +217,7 @@ class Mnasnet(dataprocess.C2dImageTask):
             sorted_data = sorted(zip(pred.flatten().tolist(), self.class_names), reverse=True)
             confidences = [str(conf) for conf, _ in sorted_data]
             names = [name for _, name in sorted_data]
-            table_output.addValueList(confidences, "Probability", names)
+            table_output2.addValueList(confidences, "Probability", names)
 
         # Step progress bar:
         self.emitStepProgress()
@@ -234,7 +258,7 @@ class MnasnetFactory(dataprocess.CTaskFactory):
         # relative path -> as displayed in Ikomia application process tree
         self.info.path = "Plugins/Python/Classification"
         self.info.iconPath = "icons/pytorch-logo.png"
-        self.info.version = "1.0.1"
+        self.info.version = "1.1.0"
         self.info.keywords = "mnasnet,mobile,classification,cnn"
 
     def create(self, param=None):
