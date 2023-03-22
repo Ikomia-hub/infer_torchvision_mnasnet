@@ -24,7 +24,7 @@ class MnasnetParam(core.CWorkflowTaskParam):
         self.classes_path = os.path.dirname(os.path.realpath(__file__)) + "/models/imagenet_classes.txt"
         self.update = False
 
-    def setParamMap(self, param_map):
+    def set_values(self, param_map):
         # Set parameters values from Ikomia application
         # Parameters values are stored as string and accessible like a python dict
         self.dataset = param_map["dataset"]
@@ -32,10 +32,10 @@ class MnasnetParam(core.CWorkflowTaskParam):
         self.model_path = param_map["model_path"]
         self.classes_path = param_map["classes_path"]
 
-    def getParamMap(self):
+    def get_values(self):
         # Send parameters values to Ikomia application
         # Create the specific dict structure (string container)
-        param_map = core.ParamMap()
+        param_map = {}
         param_map["dataset"] = self.dataset
         param_map["input_size"] = str(self.input_size)
         param_map["model_path"] = self.model_path
@@ -47,36 +47,23 @@ class MnasnetParam(core.CWorkflowTaskParam):
 # - Class which implements the process
 # - Inherits core.CProtocolTask or derived from Ikomia API
 # --------------------
-class Mnasnet(dataprocess.C2dImageTask):
+class Mnasnet(dataprocess.CClassificationTask):
 
     def __init__(self, name, param):
-        dataprocess.C2dImageTask.__init__(self, name)
+        dataprocess.CClassificationTask.__init__(self, name)
         self.model = None
         self.colors = None
         self.class_names = []
         # Detect if we have a GPU available
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        # Add graphics output
-        self.addOutput(dataprocess.CGraphicsOutput())
-        # Add numeric outputs
-        self.addOutput(dataprocess.CBlobMeasureIO())
-        self.addOutput(dataprocess.CDataStringIO())
 
         # Create parameters class
         if param is None:
-            self.setParam(MnasnetParam())
+            self.set_param_object(MnasnetParam())
         else:
-            self.setParam(copy.deepcopy(param))
+            self.set_param_object(copy.deepcopy(param))
 
-    def load_class_names(self):
-        self.class_names.clear()
-        param = self.getParam()
-
-        with open(param.classes_path) as f:
-            for row in f:
-                self.class_names.append(row[:-1])
-
-    def getProgressSteps(self):
+    def get_progress_steps(self):
         # Function returning the number of progress steps for this process
         # This is handled by the main progress bar of Ikomia application
         return 2
@@ -122,27 +109,19 @@ class Mnasnet(dataprocess.C2dImageTask):
 
     def run(self):
         # Core function of your process
-        # Call beginTaskRun for initialization
-        self.beginTaskRun()
+        # Call begin_task_run for initialization
+        self.begin_task_run()
 
         # Get parameters :
-        param = self.getParam()
-
-        # Get input :
-        image_in = self.getInput(0)
-        src_image = image_in.getImage()
-        graphics_in = self.getInput(1)
-
-        h = src_image.shape[0]
-        w = src_image.shape[1]
+        param = self.get_param_object()
 
         # Step progress bar:
-        self.emitStepProgress()
+        self.emit_step_progress()
 
         # Load model
         if self.model is None or param.update:
             # Load class names
-            self.load_class_names()
+            self.read_class_names(param.classes_path)
             # Load model
             use_torchvision = param.dataset != "Custom"
             self.model = models.mnasnet(use_pretrained=use_torchvision,
@@ -154,82 +133,31 @@ class Mnasnet(dataprocess.C2dImageTask):
             self.model.to(self.device)
             param.update = False
 
-        # Prepare outputs
-        graphics_output = self.getOutput(1)
-        graphics_output.setNewLayer("ResNet")
-        graphics_output.setImageIndex(0)
-        table_output1 = self.getOutput(2)
-        table_output1.clearData()
-        table_output2 = self.getOutput(3)
-        table_output2.setOutputType(dataprocess.NumericOutputType.TABLE)
-        table_output2.clearData()
-
-        objects_to_classify = []
-        if graphics_in.isDataAvailable():
-            for item in graphics_in.getItems():
-                if not item.isTextItem():
-                    objects_to_classify.append(item)
-
-        if len(objects_to_classify) > 0:
-            for obj in objects_to_classify:
-                # Inference
-                rc = obj.getBoundingRect()
-                crop_img = self.crop_image(src_image, w, h, rc)
-
-                if crop_img is None:
+        if not self.is_whole_image_classification():
+            input_objects = self.get_input_objects()
+            for obj in input_objects:
+                roi_img = self.get_object_sub_image(obj)
+                if roi_img is None:
                     continue
 
-                pred = self.predict(crop_img, param.input_size)
-                class_index = pred.argmax()
-                # Box
-                prop_rect = core.GraphicsRectProperty()
-                prop_rect.pen_color = self.colors[class_index]
-                graphics_box = graphics_output.addRectangle(rc[0], rc[1], rc[2], rc[3], prop_rect)
-                graphics_box.setCategory(self.class_names[class_index])
-                # Label
-                msg = str(graphics_box.getId()) + " - " + self.class_names[class_index]
-                prop_text = core.GraphicsTextProperty()
-                prop_text.font_size = 10
-                prop_text.color = self.colors[class_index]
-                graphics_output.addText(msg, rc[0], rc[1], prop_text)
-                # Object results
-                results = []
-                confidence_data = dataprocess.CObjectMeasure(
-                    dataprocess.CMeasure(core.MeasureId.CUSTOM, "Confidence"),
-                    pred[class_index].item(),
-                    graphics_box.getId(),
-                    self.class_names[class_index])
-                box_data = dataprocess.CObjectMeasure(
-                    dataprocess.CMeasure(core.MeasureId.BBOX),
-                    rc,
-                    graphics_box.getId(),
-                    self.class_names[class_index])
-                results.append(confidence_data)
-                results.append(box_data)
-                table_output1.addObjectMeasures(results)
+                predictions = self.predict(roi_img, param.input_size)
+                class_index = predictions.argmax().item()
+                self.add_object(obj, class_index, predictions[class_index].item())
+
         else:
-            pred = self.predict(src_image, param.input_size)
-            # Set graphics output
-            class_index = pred.argmax()
-            msg = self.class_names[class_index] + ": {:.3f}".format(pred[class_index])
-            graphics_output.addText(msg, 0.05 * w, 0.05 * h)
-            # Set numeric output
-            sorted_data = sorted(zip(pred.flatten().tolist(), self.class_names), reverse=True)
+            image_in = self.get_input(0)
+            src_image = image_in.get_image()
+            predictions = self.predict(src_image, param.input_size)
+            sorted_data = sorted(zip(predictions.flatten().tolist(), self.get_names()), reverse=True)
             confidences = [str(conf) for conf, _ in sorted_data]
             names = [name for _, name in sorted_data]
-            table_output2.addValueList(confidences, "Probability", names)
+            self.set_whole_image_results(names, confidences)
 
         # Step progress bar:
-        self.emitStepProgress()
+        self.emit_step_progress()
 
-        # Forward input image
-        self.forwardInputImage(0, 0)
-
-        # Step progress bar:
-        self.emitStepProgress()
-
-        # Call endTaskRun to finalize process
-        self.endTaskRun()
+        # Call end_task_run to finalize process
+        self.end_task_run()
 
 
 # --------------------
@@ -242,7 +170,7 @@ class MnasnetFactory(dataprocess.CTaskFactory):
         dataprocess.CTaskFactory.__init__(self)
         # Set process information as string here
         self.info.name = "infer_torchvision_mnasnet"
-        self.info.shortDescription = "MnasNet inference model for image classification."
+        self.info.short_description = "MnasNet inference model for image classification."
         self.info.description = "MnasNet inference model for image classification. " \
                                 "Implementation from PyTorch torchvision package. " \
                                 "This Ikomia plugin can make inference of pre-trained model from " \
@@ -253,12 +181,12 @@ class MnasnetFactory(dataprocess.CTaskFactory):
         self.info.journal = "Conference on Computer Vision and Pattern Recognition (CVPR)"
         self.info.year = 2019
         self.info.licence = "BSD-3-Clause License"
-        self.info.documentationLink = "https://arxiv.org/abs/1807.11626"
+        self.info.documentation_link = "https://arxiv.org/abs/1807.11626"
         self.info.repository = "https://github.com/pytorch/vision"
         # relative path -> as displayed in Ikomia application process tree
         self.info.path = "Plugins/Python/Classification"
-        self.info.iconPath = "icons/pytorch-logo.png"
-        self.info.version = "1.1.1"
+        self.info.icon_path = "icons/pytorch-logo.png"
+        self.info.version = "1.3.0"
         self.info.keywords = "mnasnet,mobile,classification,cnn"
 
     def create(self, param=None):
