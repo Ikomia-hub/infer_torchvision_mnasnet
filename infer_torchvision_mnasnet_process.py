@@ -35,11 +35,10 @@ class MnasnetParam(core.CWorkflowTaskParam):
     def get_values(self):
         # Send parameters values to Ikomia application
         # Create the specific dict structure (string container)
-        param_map = {}
-        param_map["dataset"] = self.dataset
-        param_map["input_size"] = str(self.input_size)
-        param_map["model_path"] = self.model_path
-        param_map["classes_path"] = self.classes_path
+        param_map = {"dataset": self.dataset,
+                     "input_size": str(self.input_size),
+                     "model_path": self.model_path,
+                     "classes_path": self.classes_path}
         return param_map
 
 
