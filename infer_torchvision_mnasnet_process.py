@@ -179,7 +179,7 @@ class MnasnetFactory(dataprocess.CTaskFactory):
         self.info.article = "MnasNet: Platform-Aware Neural Architecture Search for Mobile"
         self.info.journal = "Conference on Computer Vision and Pattern Recognition (CVPR)"
         self.info.year = 2019
-        self.info.licence = "BSD-3-Clause License"
+        self.info.license = "BSD-3-Clause License"
         self.info.documentation_link = "https://arxiv.org/abs/1807.11626"
         self.info.repository = "https://github.com/pytorch/vision"
         # relative path -> as displayed in Ikomia application process tree
