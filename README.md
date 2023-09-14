@@ -22,7 +22,7 @@
 
 MnasNet inference model for image classification. 
 
-![Cat classification](https://raw.githubusercontent.com/Ikomia-hub/infer_torchvision_resnet/main/icons/output.jpg)
+![Cat classification](https://raw.githubusercontent.com/Ikomia-hub/infer_torchvision_mnasnet/main/icons/output.jpg)
 
 
 ## :rocket: Use with Ikomia API
