@@ -36,7 +36,7 @@ class MnasnetWidget(core.CWorkflowTaskWidget):
         self.browse_classes = pyqtutils.append_browse_file(self.grid_layout, "Classes path", self.parameters.class_file)
 
         if self.parameters.dataset == "ImageNet":
-            self.browse_model.set_path("Not used")
+            self.browse_model.set_path("")
             self.browse_model.setEnabled(False)
             self.browse_classes.setEnabled(False)
 
@@ -54,7 +54,7 @@ class MnasnetWidget(core.CWorkflowTaskWidget):
 
     def on_combo_dataset_changed(self, index):
         if self.combo_dataset.itemText(index) == "ImageNet":
-            self.browse_model.set_path("Not used")
+            self.browse_model.set_path("")
             self.browse_model.setEnabled(False)
             self.browse_classes.set_path(os.path.dirname(os.path.realpath(__file__)) + "/models/imagenet_classes.txt")
             self.browse_classes.setEnabled(False)
