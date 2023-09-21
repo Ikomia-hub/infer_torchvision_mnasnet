@@ -131,11 +131,13 @@ class Mnasnet(dataprocess.CClassificationTask):
             use_torchvision = param.dataset != "Custom"
 
             old_dir = torch.hub.get_dir()
-            torch.hub.set_dir(os.path.join(os.path.dirname(os.path.realpath(__file__)) + "models"))
+            torch.hub.set_dir(os.path.join(os.path.dirname(os.path.realpath(__file__)), "weights"))
+
             self.model = models.mnasnet(use_pretrained=use_torchvision,
                                           classes=len(self.class_names))
             if param.dataset == "Custom":
                 self.model.load_state_dict(torch.load(param.model_path, map_location=self.device))
+
             torch.hub.set_dir(old_dir)
             self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in self.class_names]
             self.model.to(self.device)
