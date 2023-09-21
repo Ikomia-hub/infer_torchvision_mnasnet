@@ -21,7 +21,7 @@ class MnasnetParam(core.CWorkflowTaskParam):
         self.dataset = 'ImageNet'
         self.input_size = 224
         self.model_path = ''
-        self.class_file = os.path.dirname(os.path.realpath(__file__)) + "/models/imagenet_classes.txt"
+        self.class_file = ''
         self.update = False
 
     def set_values(self, param_map):
@@ -120,7 +120,13 @@ class Mnasnet(dataprocess.CClassificationTask):
         # Load model
         if self.model is None or param.update:
             # Load class names
+            changed = False
+            if param.class_file == '':
+                param.class_file = os.path.dirname(os.path.realpath(__file__)) + "/models/imagenet_classes.txt"
+                changed = True
             self.read_class_names(param.class_file)
+            if changed:
+                param.class_file = ''
             # Load model
             use_torchvision = param.dataset != "Custom"
             self.model = models.mnasnet(use_pretrained=use_torchvision,
