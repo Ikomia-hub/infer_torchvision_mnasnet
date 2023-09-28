@@ -181,18 +181,14 @@ class MnasnetFactory(dataprocess.CTaskFactory):
         # Set process information as string here
         self.info.name = "infer_torchvision_mnasnet"
         self.info.short_description = "MnasNet inference model for image classification."
-        self.info.description = "MnasNet inference model for image classification. " \
-                                "Implementation from PyTorch torchvision package. " \
-                                "This Ikomia plugin can make inference of pre-trained model from " \
-                                "ImageNet dataset or custom trained model. Custom training can be made with " \
-                                "the associated MnasNetTrain plugin from Ikomia marketplace."
         self.info.authors = "Mingxing Tan, Bo Chen, Ruoming Pang, Vijay Vasudevan, Mark Sandler, Andrew Howard, Quoc V. Le"
         self.info.article = "MnasNet: Platform-Aware Neural Architecture Search for Mobile"
         self.info.journal = "Conference on Computer Vision and Pattern Recognition (CVPR)"
         self.info.year = 2019
         self.info.license = "BSD-3-Clause License"
         self.info.documentation_link = "https://arxiv.org/abs/1807.11626"
-        self.info.repository = "https://github.com/pytorch/vision"
+        self.info.repository = "https://github.com/Ikomia-hub/infer_torchvision_mnasnet"
+        self.info.original_repository = "https://github.com/pytorch/vision"
         # relative path -> as displayed in Ikomia application process tree
         self.info.path = "Plugins/Python/Classification"
         self.info.icon_path = "icons/pytorch-logo.png"
