@@ -194,6 +194,8 @@ class MnasnetFactory(dataprocess.CTaskFactory):
         self.info.icon_path = "icons/pytorch-logo.png"
         self.info.version = "1.3.0"
         self.info.keywords = "mnasnet,mobile,classification,cnn"
+        self.info.algo_type = core.AlgoType.INFER
+        self.info.algo_tasks = "CLASSIFICATION"
 
     def create(self, param=None):
         # Create process object
