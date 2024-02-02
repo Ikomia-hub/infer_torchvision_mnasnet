@@ -192,7 +192,7 @@ class MnasnetFactory(dataprocess.CTaskFactory):
         # relative path -> as displayed in Ikomia application process tree
         self.info.path = "Plugins/Python/Classification"
         self.info.icon_path = "icons/pytorch-logo.png"
-        self.info.version = "1.3.0"
+        self.info.version = "1.3.1"
         self.info.keywords = "mnasnet,mobile,classification,cnn"
         self.info.algo_type = core.AlgoType.INFER
         self.info.algo_tasks = "CLASSIFICATION"
