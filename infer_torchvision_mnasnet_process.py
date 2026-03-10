@@ -54,7 +54,8 @@ class Mnasnet(dataprocess.CClassificationTask):
         self.colors = None
         self.class_names = []
         # Detect if we have a GPU available
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(
+            "cuda:0" if torch.cuda.is_available() else "cpu")
 
         # Create parameters class
         if param is None:
@@ -93,8 +94,9 @@ class Mnasnet(dataprocess.CClassificationTask):
 
         trs = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-            ])
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                                 0.229, 0.224, 0.225])
+        ])
 
         input_tensor = trs(input_img).to(self.device)
         input_tensor = input_tensor.unsqueeze(0)
@@ -122,7 +124,8 @@ class Mnasnet(dataprocess.CClassificationTask):
             # Load class names
             changed = False
             if param.class_file == '':
-                param.class_file = os.path.dirname(os.path.realpath(__file__)) + "/models/imagenet_classes.txt"
+                param.class_file = os.path.dirname(os.path.realpath(
+                    __file__)) + "/models/imagenet_classes.txt"
                 changed = True
             self.read_class_names(param.class_file)
             if changed:
@@ -131,15 +134,18 @@ class Mnasnet(dataprocess.CClassificationTask):
             use_torchvision = param.dataset != "Custom"
 
             old_dir = torch.hub.get_dir()
-            torch.hub.set_dir(os.path.join(os.path.dirname(os.path.realpath(__file__)), "weights"))
+            torch.hub.set_dir(os.path.join(os.path.dirname(
+                os.path.realpath(__file__)), "weights"))
 
             self.model = models.mnasnet(use_pretrained=use_torchvision,
-                                          classes=len(self.class_names))
+                                        classes=len(self.class_names))
             if param.dataset == "Custom":
-                self.model.load_state_dict(torch.load(param.model_path, map_location=self.device))
+                self.model.load_state_dict(torch.load(
+                    param.model_path, map_location=self.device))
 
             torch.hub.set_dir(old_dir)
-            self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in self.class_names]
+            self.colors = [[random.randint(0, 255) for _ in range(3)]
+                           for _ in self.class_names]
             self.model.to(self.device)
             param.update = False
 
@@ -152,13 +158,15 @@ class Mnasnet(dataprocess.CClassificationTask):
 
                 predictions = self.predict(roi_img, param.input_size)
                 class_index = predictions.argmax().item()
-                self.add_object(obj, class_index, predictions[class_index].item())
+                self.add_object(obj, class_index,
+                                predictions[class_index].item())
 
         else:
             image_in = self.get_input(0)
             src_image = image_in.get_image()
             predictions = self.predict(src_image, param.input_size)
-            sorted_data = sorted(zip(predictions.flatten().tolist(), self.get_names()), reverse=True)
+            sorted_data = sorted(
+                zip(predictions.flatten().tolist(), self.get_names()), reverse=True)
             confidences = [str(conf) for conf, _ in sorted_data]
             names = [name for _, name in sorted_data]
             self.set_whole_image_results(names, confidences)
@@ -192,7 +200,9 @@ class MnasnetFactory(dataprocess.CTaskFactory):
         # relative path -> as displayed in Ikomia application process tree
         self.info.path = "Plugins/Python/Classification"
         self.info.icon_path = "icons/pytorch-logo.png"
-        self.info.version = "1.3.1"
+        self.info.version = "2.0.0"
+        self.info.min_ikomia_version = "0.15.0"
+        self.info.min_python_version = "3.11.0"
         self.info.keywords = "mnasnet,mobile,classification,cnn"
         self.info.algo_type = core.AlgoType.INFER
         self.info.algo_tasks = "CLASSIFICATION"
